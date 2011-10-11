@@ -5,18 +5,33 @@
 * MIT license
 */
 
-var Shapeshifter = function (query, callbackActive, callbackInactive) {
+var Shapeshifter = function (query, options) {
+
+  defaults = {
+    testImmediately: true,
+    callbackActive: function(){},
+    callbackInactive: function(){}
+  }
+
+  function merge(obj1, obj2){
+    var obj3 = {};
+    for (var attrname in obj1) { obj3[attrname] = obj1[attrname]; }
+    for (var attrname in obj2) { obj3[attrname] = obj2[attrname]; }
+    return obj3;
+  }
 
   var object = function () {
     var self = this;
 
     this.query = query;
-
-    this.active = false;
+    
+    this.options = merge(defaults, options);
+    
+    this.state = false;
 
     this.callback = {
-      active : (typeof callbackActive === "function") ? callbackActive : null,
-      inactive : (typeof callbackInactive === "function") ? callbackInactive : null
+      active : this.options.callbackActive,
+      inactive : this.options.callbackInactive
     };
 
     this.remove = function () {
@@ -25,21 +40,38 @@ var Shapeshifter = function (query, callbackActive, callbackInactive) {
     };
 
     this.exec = function () {
+      test = window.matchMedia(self.query).matches;
+      bool = (typeof test === 'boolean') ? test : test.matches;
+      
       //is the query active?
-      if (window.matchMedia(self.query)) {
+      if (bool) {
         //State Change
-        if (!self.active) { self.callback.active(); }
-        self.active = true;
+        if (!self.state) { self.callback.active(); }
+        self.state = true;
       } else {
         //State Change
-        if (self.active) { self.callback.inactive(); }
-        self.inactive = false;
+        if (self.state) { self.callback.inactive(); }
+        self.state = false;
+      }
+    };
+
+    this.init = function(){
+      test = window.matchMedia(self.query).matches;
+      
+      this.state = (typeof test == 'boolean') ? test : test.matches;
+      
+      if(this.state){
+        self.callback.active();
+      } else {
+        self.callback.inactive();
       }
     };
 
     window.addEventListener('resize', this.exec);
     window.addEventListener('orientationchange', this.exec);
-    this.exec();
+    if(this.options.testImmediately){
+      this.init();
+    }
  
   };
 
