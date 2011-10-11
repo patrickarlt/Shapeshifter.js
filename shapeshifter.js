@@ -5,34 +5,34 @@
 * MIT license
 */
 
-Shapeshifter = function(query, callbackActive, callbackInactive){
-  
-  var object = function(){
+var Shapeshifter = function (query, callbackActive, callbackInactive) {
+
+  var object = function () {
     var self = this;
-    
+
     this.query = query;
 
     this.active = false;
-    
-    this.callback = {
-      active : (typeof callbackActive == "function") ? callbackActive : null;
-      inactive : (typeof callbackInactive == "function") ? callbackInactive : null;
-    }
 
-    this.remove = function(){
+    this.callback = {
+      active : (typeof callbackActive === "function") ? callbackActive : null,
+      inactive : (typeof callbackInactive === "function") ? callbackInactive : null
+    };
+
+    this.remove = function () {
       window.removeEventListener('resize', this.exec);
       window.removeEventListener('onorientationchange', this.exec);      
     };
 
-    this.exec = function(){
+    this.exec = function () {
       //is the query active?
-      if(window.matchMedia(self.query)){
+      if (window.matchMedia(self.query)) {
         //State Change
-        (!self.active) ? self.callback.active() : false;
+        if (!self.active) { self.callback.active(); }
         self.active = true;
       } else {
         //State Change
-        (self.active) ? self.callback.inactive() : false;
+        if (self.active) { self.callback.inactive(); }
         self.inactive = false;
       }
     };
@@ -40,10 +40,8 @@ Shapeshifter = function(query, callbackActive, callbackInactive){
     window.addEventListener('resize', this.exec);
     window.addEventListener('orientationchange', this.exec);
     this.exec();
-  
+ 
   };
-
-  object.prototype = {};
 
   return new object();
 
