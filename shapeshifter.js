@@ -69,6 +69,7 @@ var Shapeshifter = function (query, options) {
 
     window.addEventListener('resize', this.exec);
     window.addEventListener('orientationchange', this.exec);
+    
     if(this.options.testImmediately){
       this.init();
     }
