@@ -1,0 +1,17 @@
+<html>
+<head>
+  <title>Testing Shapeshifter</title>
+  <script type="text/javascript" src="shapeshifter.js"></script>
+  <script type="text/javascript">
+    window.onload = function (){
+      layoutManager = new Shapeshifter('(min-width: 786px)', {
+        becomesActive: function(){ console.log('Is at least 786px'); },
+        becomesInactive: function(){ console.log('Is less then 786px')}
+      });
+    };
+  </script>
+</head>
+<body>
+  Resize Your Window
+</body>
+</html>

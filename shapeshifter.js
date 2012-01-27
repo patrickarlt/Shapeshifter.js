@@ -8,9 +8,8 @@
 var Shapeshifter = function (query, options) {
 
   defaults = {
-    testImmediately: true,
-    callbackActive: function(){},
-    callbackInactive: function(){}
+    becomesActive: function(){},
+    becomesInactive: function(){}
   }
 
   function merge(obj1, obj2){
@@ -30,8 +29,8 @@ var Shapeshifter = function (query, options) {
     this.state = false;
 
     this.callback = {
-      active : this.options.callbackActive,
-      inactive : this.options.callbackInactive
+      active : this.options.becomesActive,
+      inactive : this.options.becomesInactive
     };
 
     this.remove = function () {
@@ -69,11 +68,9 @@ var Shapeshifter = function (query, options) {
 
     window.addEventListener('resize', this.exec);
     window.addEventListener('orientationchange', this.exec);
-    
-    if(this.options.testImmediately){
-      this.init();
-    }
- 
+
+    this.init();
+
   };
 
   return new object();
