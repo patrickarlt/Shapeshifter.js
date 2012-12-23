@@ -1,128 +1,107 @@
-/*
-* Shapeshifter.js - make binding function to media queries easy
-* primary author: Patrick Arlt
-* Copyright (c) 2011 Patrick Arlt
-* MIT license
-*/
-
-var Shapeshifter = function (query, options) {
-
-  defaults = {
-    becomesActive: function(){},
-    becomesInactive: function(){}
+(function (root, factory) {
+  if (typeof define === 'function' && define.amd) {
+    // define and anonymous AMD module
+    define(factory);
+  } else {
+    // define a browser global
+    root.Shapeshifter = factory();
   }
+}(this, function(){
+  var Shapeshifter = {
+    watchers: []
+  },
+  bool,
+  doc = document,
+  docElem = doc.documentElement,
+  refNode = docElem.firstElementChild || docElem.firstChild,
+  // fakeBody required for <FF4 when executed in <head>
+  fakeBody = doc.createElement( "body" ),
+  div = doc.createElement( "div" );
 
-  function merge(obj1, obj2){
-    var obj3 = {};
-    for (var attrname in obj1) { obj3[attrname] = obj1[attrname]; }
-    for (var attrname in obj2) { obj3[attrname] = obj2[attrname]; }
-    return obj3;
-  }
+  div.id = "mq-test-1";
+  div.style.cssText = "position:absolute;top:-100em";
+  fakeBody.style.background = "none";
+  fakeBody.appendChild(div);
 
-  var object = function () {
-    var self = this;
-
-    this.query = query;
-    
-    this.options = merge(defaults, options);
-    
-    this.state = false;
-
-    this.callback = {
-      active : this.options.becomesActive,
-      inactive : this.options.becomesInactive
+  Shapeshifter.matchMedia = function(q){
+    div.innerHTML = "&shy;<style media=\"" + q + "\"> #mq-test-1 { width: 42px; }</style>";
+    docElem.insertBefore( fakeBody, refNode );
+    bool = div.offsetWidth === 42;
+    docElem.removeChild( fakeBody );
+    return {
+      matches: bool,
+      media: q
     };
-
-    this.remove = function () {
-      window.removeEventListener('resize', this.exec);
-      window.removeEventListener('onorientationchange', this.exec);      
-    };
-
-    this.exec = function () {
-      test = window.matchMedia(self.query).matches;
-      bool = (typeof test === 'boolean') ? test : test.matches;
-      
-      //is the query active?
-      if (bool) {
-        //State Change
-        if (!self.state) { self.callback.active(); }
-        self.state = true;
-      } else {
-        //State Change
-        if (self.state) { self.callback.inactive(); }
-        self.state = false;
-      }
-    };
-
-    this.init = function(){
-      test = window.matchMedia(self.query).matches;
-      
-      this.state = (typeof test == 'boolean') ? test : test.matches;
-      
-      if(this.state){
-        self.callback.active();
-      } else {
-        self.callback.inactive();
-      }
-    };
-
-    window.addEventListener('resize', this.exec);
-    window.addEventListener('orientationchange', this.exec);
-
-    this.init();
-
   };
 
-  return new object();
+  Shapeshifter.Watcher = function(mq, opts){
+    this.query = mq;
+    this.onActive = (typeof opts.active === "function") ? opts.active : new Function();
+    this.onInactive = (typeof opts.inactive === "function") ? opts.inactive : new Function();
+    if (this.matches()) {
+      this.isActive = true;
+      this.onActive(this);
+    } else {
+      this.isActive = false;
+      this.onInactive(this);
+    }
+  };
 
-};
-
-/*
-* matchMedia() polyfill - test whether a CSS media type or media query applies
-* primary author: Scott Jehl
-* Copyright (c) 2010 Filament Group, Inc
-* MIT license
-* adapted by Paul Irish to use the matchMedia API
-* http://dev.w3.org/csswg/cssom-view/#dom-window-matchmedia
-* which webkit now supports: http://trac.webkit.org/changeset/72552
-*
-* Doesn't implement media.type as there's no way for crossbrowser property
-* getters. instead of media.type == 'tv' just use media.matchMedium('tv')
-*/
-
-if ( !(window.matchMedia) ){
-  
-  window.matchMedia = (function(doc,undefined){
-    
-    var cache = {},
-        docElem = doc.documentElement,
-        fakeBody = doc.createElement('body'),
-        testDiv = doc.createElement('div');
-    
-    testDiv.setAttribute('id','ejs-qtest');
-    fakeBody.appendChild(testDiv);
-    
-    return function(q){
-      if (cache[q] === undefined) {
-        var styleBlock = doc.createElement('style'),
-          cssrule = '@media '+q+' { #ejs-qtest { position: absolute; } }';
-        //must set type for IE! 
-        styleBlock.type = "text/css"; 
-        if (styleBlock.styleSheet){ 
-          styleBlock.styleSheet.cssText = cssrule;
-        } 
-        else {
-          styleBlock.appendChild(doc.createTextNode(cssrule));
-        } 
-        docElem.insertBefore(fakeBody, docElem.firstChild);
-        docElem.insertBefore(styleBlock, docElem.firstChild);
-        cache[q] = ((window.getComputedStyle ? window.getComputedStyle(testDiv,null) : testDiv.currentStyle)['position'] == 'absolute');
-        docElem.removeChild(fakeBody);
-        docElem.removeChild(styleBlock);
+  Shapeshifter.Watcher.prototype = {
+    matches: function(){
+      return Shapeshifter.matchMedia(this.query).matches;
+    },
+    active: function(){
+      return this.isActive;
+    },
+    test: function(){
+      if(this.matches() && !this.active()){
+        this.isActive = true;
+        this.onActive(this);
+      } else if (!this.matches() && this.active()){
+        this.isActive = false;
+        this.onInactive(this);
       }
-      return cache[q];
-    };
-    
-  })(document);
+    }
+  };
 
-}
+  Shapeshifter.watch = function(mq, options){
+    Shapeshifter.watchers.push(new Shapeshifter.Watcher(mq, options));
+  };
+
+  Shapeshifter.stop = function(mq){
+    for (var i = 0; i < Shapeshifter.watchers.length; i++) {
+      watcher = Shapeshifter.watchers[i];
+      console.log(watcher.query, mq, watcher.query === mq, i);
+      if(watcher.query === mq) {
+        Shapeshifter.watchers.splice(i, 1);
+      }
+    }
+  };
+
+  Shapeshifter.testAll = function(e){
+    for (var i = Shapeshifter.watchers.length - 1; i >= 0; i--) {
+      Shapeshifter.watchers[i].test();
+    }
+  };
+
+  Shapeshifter.once = function(mq, callback){
+    Shapeshifter.watchers.push(new Shapeshifter.Watcher(mq, {
+      active: function(){
+        Shapeshifter.stop(mq);
+        callback();
+      }
+    }));
+  };
+
+  Shapeshifter.on = function(mq, callback){
+    Shapeshifter.watchers.push(new Shapeshifter.Watcher(mq, {
+      active: callback
+    }));
+  };
+
+  window.addEventListener('resize', Shapeshifter.testAll);
+  window.addEventListener('orientationchange', Shapeshifter.testAll);
+
+  return Shapeshifter;
+}));
